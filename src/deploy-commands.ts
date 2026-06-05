@@ -1,22 +1,26 @@
 import 'dotenv/config'
 import { REST, Routes } from 'discord.js'
-import * as help      from './commands/help'
-import * as unclaimed from './commands/unclaimed'
-import * as shows     from './commands/shows'
-import * as reviews   from './commands/reviews'
-import * as claim     from './commands/claim'
-import * as unclaim   from './commands/unclaim'
-import * as done      from './commands/done'
-import * as register  from './commands/register'
-import * as request   from './commands/request'
-import * as contact  from './commands/contact'
+import * as help         from './commands/help'
+import * as unclaimed    from './commands/unclaimed'
+import * as shows        from './commands/shows'
+import * as reviews      from './commands/reviews'
+import * as claim        from './commands/claim'
+import * as unclaim      from './commands/unclaim'
+import * as done         from './commands/done'
+import * as register     from './commands/register'
+import * as request      from './commands/request'
+import * as contact      from './commands/contact'
+import * as addcontact   from './commands/addcontact'
+import * as exportroster from './commands/exportroster'
 
 const token    = process.env.DISCORD_BOT_TOKEN!
 const clientId = process.env.DISCORD_CLIENT_ID!
 const guildId  = process.env.DISCORD_GUILD_ID
 
-const commandData = [help, unclaimed, shows, reviews, claim, unclaim, done, register, request, contact]
-  .map(c => c.data.toJSON())
+const commandData = [
+  help, unclaimed, shows, reviews, claim, unclaim,
+  done, register, request, contact, addcontact, exportroster,
+].map(c => c.data.toJSON())
 
 const rest = new REST().setToken(token)
 
