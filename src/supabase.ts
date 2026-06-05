@@ -11,7 +11,7 @@ export const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY,
   {
     realtime: {
-      transport: ws,
+      transport: ws as any,
     },
   }
 )
