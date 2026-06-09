@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js'
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from 'discord.js'
 import { supabase } from '../supabase'
 
 export const data = new SlashCommandBuilder()
@@ -14,7 +14,7 @@ export const data = new SlashCommandBuilder()
 // Use this only if you want to link your Discord account to an existing profile
 // (e.g. to get your real name on claims rather than your Discord display name).
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  await interaction.deferReply({ ephemeral: true })
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
   const email = interaction.options.getString('email', true).toLowerCase().trim()
 
