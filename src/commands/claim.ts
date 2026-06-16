@@ -4,6 +4,7 @@ import {
   TextChannel,
 } from 'discord.js'
 import { supabase } from '../supabase'
+import { getOrCreateUser } from '../lib/getOrCreateUser'
 import { fmtDate } from '../types'
 
 export const data = new SlashCommandBuilder()
@@ -31,15 +32,9 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.deferReply({ ephemeral: true })
 
-  // Look up registered user
-  const { data: user } = await supabase
-    .from('users')
-    .select('id, name')
-    .eq('discord_id', interaction.user.id)
-    .single()
-
+  const user = await getOrCreateUser(interaction.user)
   if (!user) {
-    await interaction.editReply('You need to register first — run `/register` to link your Discord account.')
+    await interaction.editReply('Could not look up your Boolin Tunes profile. Try again in a moment.')
     return
   }
 

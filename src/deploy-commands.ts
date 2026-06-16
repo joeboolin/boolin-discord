@@ -7,7 +7,6 @@ import * as reviews      from './commands/reviews'
 import * as claim        from './commands/claim'
 import * as unclaim      from './commands/unclaim'
 import * as done         from './commands/done'
-import * as register     from './commands/register'
 import * as request      from './commands/request'
 import * as contact      from './commands/contact'
 import * as addcontact   from './commands/addcontact'
@@ -19,7 +18,7 @@ const guildId  = process.env.DISCORD_GUILD_ID
 
 const commandData = [
   help, unclaimed, shows, reviews, claim, unclaim,
-  done, register, request, contact, addcontact, exportroster,
+  done, request, contact, addcontact, exportroster,
 ].map(c => c.data.toJSON())
 
 const rest = new REST().setToken(token)

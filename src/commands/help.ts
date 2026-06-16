@@ -27,10 +27,6 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
           '`/unclaim review [artist]` — Release a review',
           '`/done [artist]` — Mark a review as done',
         ].join('\n'),
-      },
-      {
-        name: '👤 Account',
-        value: '`/register [email]` — Link your Discord account to your Boolin Tunes profile',
       }
     )
     .setFooter({ text: 'Boolin Tunes Internal' })

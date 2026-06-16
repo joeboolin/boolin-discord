@@ -6,7 +6,6 @@ import * as reviews      from './reviews'
 import * as claim        from './claim'
 import * as unclaim      from './unclaim'
 import * as done         from './done'
-import * as register     from './register'
 import * as request      from './request'
 import * as contact      from './contact'
 import * as addcontact   from './addcontact'
@@ -21,7 +20,7 @@ export const commands = new Collection<string, Command>()
 
 for (const cmd of [
   help, unclaimed, shows, reviews, claim, unclaim,
-  done, register, request, contact, addcontact, exportroster,
+  done, request, contact, addcontact, exportroster,
 ]) {
   commands.set(cmd.data.name, cmd as Command)
 }
