@@ -3,8 +3,7 @@ import {
   SlashCommandBuilder,
   TextChannel,
 } from 'discord.js'
-import { supabase } from '../supabase'
-import { getOrCreateUser } from '../lib/getOrCreateUser'
+import { supabase, getOrCreateUser } from '../supabase'
 import { fmtDate } from '../types'
 
 export const data = new SlashCommandBuilder()
@@ -32,11 +31,12 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.deferReply({ ephemeral: true })
 
-  const user = await getOrCreateUser(interaction.user)
-  if (!user) {
-    await interaction.editReply('Could not look up your Boolin Tunes profile. Try again in a moment.')
-    return
-  }
+  const user = await getOrCreateUser(
+    interaction.user.id,
+    interaction.member && 'displayName' in interaction.member
+      ? interaction.member.displayName
+      : interaction.user.displayName ?? interaction.user.username
+  )
 
   const sub    = interaction.options.getSubcommand()
   const artist = interaction.options.getString('artist', true)

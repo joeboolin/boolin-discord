@@ -92,7 +92,7 @@ export async function onWeekInserted(week: NmfWeek, channel: TextChannel): Promi
 
   const embed = new EmbedBuilder()
     .setColor(COLOURS.week)
-    .setTitle(`New NMF Week — w/c ${fmtWeekDate(week.week_date)}`)
+    .setTitle(`New Content Week — w/c ${fmtWeekDate(week.week_date)}`)
     .setDescription(
       count && count > 0
         ? `${count} reviews unassigned. Use \`/reviews\` to see them.`
