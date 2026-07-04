@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js'
 import { supabase } from '../supabase'
-import { Show, fmtDate } from '../types'
+import { Show, fmtDate, todayLondon } from '../types'
 
 export const data = new SlashCommandBuilder()
   .setName('unclaimed')
@@ -9,7 +9,7 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.deferReply({ ephemeral: true })
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayLondon()
 
   const { data: shows, error } = await supabase
     .from('shows')

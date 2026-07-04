@@ -1,10 +1,9 @@
 import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
-  TextChannel,
 } from 'discord.js'
 import { supabase, getOrCreateUser } from '../supabase'
-import { fmtDate } from '../types'
+import { fmtDate, todayLondon } from '../types'
 
 export const data = new SlashCommandBuilder()
   .setName('claim')
@@ -28,6 +27,10 @@ export const data = new SlashCommandBuilder()
       .addStringOption(o => o.setName('artist').setDescription('Artist name (partial match)').setRequired(true))
   )
 
+// No manual channel.send() confirmations in here — the DB update fires the
+// Supabase Realtime subscription, which posts the public embed to the
+// notification channel. Posting from the command as well produced doubles.
+
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.deferReply({ ephemeral: true })
 
@@ -44,7 +47,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   if (sub === 'show') {
     const slot = interaction.options.getString('slot', true) as 'photo' | 'words'
     const field = slot === 'photo' ? 'photographer_id' : 'writer_id'
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayLondon()
 
     // Fuzzy match upcoming show
     const { data: shows } = await supabase
@@ -70,12 +73,24 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       return
     }
 
-    await supabase.from('shows').update({ [field]: user.id }).eq('id', show.id)
+    // Conditional update: .is(field, null) makes this race-safe. If someone
+    // claimed between our read and this write, zero rows update and we say
+    // so, instead of silently overwriting their claim.
+    const { data: updated, error } = await supabase
+      .from('shows')
+      .update({ [field]: user.id })
+      .eq('id', show.id)
+      .is(field, null)
+      .select('id')
 
-    // Visible channel confirmation
-    const msg = `📸 **${user.name}** claimed the **${slot}** slot for **${show.artist}** (${fmtDate(show.show_date)})`
-    const channel = interaction.channel
-    if (channel instanceof TextChannel) await channel.send(msg)
+    if (error) {
+      await interaction.editReply('Database error while claiming — try again in a moment.')
+      return
+    }
+    if (!updated?.length) {
+      await interaction.editReply(`Someone beat you to it — the ${slot} slot for **${show.artist}** was just taken.`)
+      return
+    }
 
     await interaction.editReply(`✅ Claimed the ${slot} slot for **${show.artist}**.`)
 
@@ -98,11 +113,21 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     }
 
     const review = reviews[0]
-    await supabase.from('reviews').update({ assignee_id: user.id }).eq('id', review.id)
+    const { data: updated, error } = await supabase
+      .from('reviews')
+      .update({ assignee_id: user.id })
+      .eq('id', review.id)
+      .is('assignee_id', null)
+      .select('id')
 
-    const msg = `✍️ **${user.name}** claimed the review for **${review.artist}**`
-    const channel = interaction.channel
-    if (channel instanceof TextChannel) await channel.send(msg)
+    if (error) {
+      await interaction.editReply('Database error while claiming — try again in a moment.')
+      return
+    }
+    if (!updated?.length) {
+      await interaction.editReply(`Someone beat you to it — the review for **${review.artist}** was just claimed.`)
+      return
+    }
 
     await interaction.editReply(`✅ Claimed the review for **${review.artist}**.`)
   }

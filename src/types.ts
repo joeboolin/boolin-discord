@@ -1,4 +1,5 @@
 export type ShowStatus =
+  | 'backlog'
   | 'to_be_requested'
   | 'awaiting_response'
   | 'awaiting_full_confirmation'
@@ -50,10 +51,28 @@ export interface User {
 }
 
 export const STATUS_LABELS: Record<ShowStatus, string> = {
-  to_be_requested:           'To Be Requested',
-  awaiting_response:         'Awaiting Response',
+  backlog:                    'Backlog',
+  to_be_requested:            'To Be Requested',
+  awaiting_response:          'Awaiting Response',
   awaiting_full_confirmation: 'Awaiting Full Confirmation',
-  fully_confirmed:           'Fully Confirmed',
+  fully_confirmed:            'Fully Confirmed',
+}
+
+// Safe label lookup. The internal site owns the status list and has grown it
+// before (backlog was added there first) — an unknown status must never
+// render as "undefined" in an embed again. Falls back to Title Casing the
+// raw value, so a future status degrades gracefully instead of breaking.
+export function statusLabel(status: string): string {
+  const known = (STATUS_LABELS as Record<string, string>)[status]
+  if (known) return known
+  return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+// Today's date (YYYY-MM-DD) in Europe/London — NOT UTC. The board's show
+// dates are UK dates; using toISOString() made "today" flip an hour early
+// (or late, in BST) around midnight. en-CA locale formats as YYYY-MM-DD.
+export function todayLondon(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())
 }
 
 export function fmtDate(iso: string): string {

@@ -20,6 +20,14 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         ].join('\n'),
       },
       {
+        name: '📇 PR Tools',
+        value: [
+          '`/contact [artist]` — Look up the PR contact for an artist',
+          '`/addcontact [company] [name] [email]` — Add a PR contact',
+          '`/exportroster [company]` — Export a company roster',
+        ].join('\n'),
+      },
+      {
         name: '📝 Content Board',
         value: [
           '`/reviews` — Unassigned reviews for current and next NMF week',

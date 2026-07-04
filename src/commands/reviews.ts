@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js'
 import { supabase } from '../supabase'
-import { fmtWeekDate } from '../types'
+import { fmtWeekDate, todayLondon } from '../types'
 
 export const data = new SlashCommandBuilder()
   .setName('reviews')
@@ -10,7 +10,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   await interaction.deferReply({ ephemeral: true })
 
   // Get the two nearest upcoming weeks
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayLondon()
   const { data: weeks, error: weeksError } = await supabase
     .from('nmf_weeks')
     .select('id, week_date')

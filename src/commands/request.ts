@@ -1,6 +1,5 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, TextChannel } from 'discord.js'
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js'
 import { supabase, getOrCreateUser } from '../supabase'
-import { fmtDate } from '../types'
 
 export const data = new SlashCommandBuilder()
   .setName('request')
@@ -73,10 +72,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     return
   }
 
-  // Post visible confirmation to the channel
-  const msg = `📅 **${artist}** added to the Live Shows board with **${user.name}** on ${slot} — ${fmtDate(isoDate)}, ${location}. Status: **To Be Requested**.`
-  const ch = interaction.channel
-  if (ch instanceof TextChannel) await ch.send(msg)
-
+  // No manual channel confirmation — the insert fires the Realtime
+  // onShowInserted embed in the live channel; posting here as well doubled it.
   await interaction.editReply(`✅ **${artist}** added to the Live Shows board. You've been put down for **${slot}**.`)
 }

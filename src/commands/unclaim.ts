@@ -1,6 +1,6 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder, TextChannel } from 'discord.js'
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js'
 import { supabase, getOrCreateUser } from '../supabase'
-import { fmtDate } from '../types'
+import { fmtDate, todayLondon } from '../types'
 
 export const data = new SlashCommandBuilder()
   .setName('unclaim')
@@ -24,6 +24,9 @@ export const data = new SlashCommandBuilder()
       .addStringOption(o => o.setName('artist').setDescription('Artist name (partial match)').setRequired(true))
   )
 
+// No manual channel.send() here — the Realtime subscription posts the public
+// "now open" embed when the DB row changes. See claim.ts for rationale.
+
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.deferReply({ ephemeral: true })
 
@@ -40,7 +43,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   if (sub === 'show') {
     const slot  = interaction.options.getString('slot', true) as 'photo' | 'words'
     const field = slot === 'photo' ? 'photographer_id' : 'writer_id'
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayLondon()
 
     const { data: shows } = await supabase
       .from('shows')
@@ -53,13 +56,28 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       await interaction.editReply(`No upcoming shows matching "${artist}" where you hold the ${slot} slot.`)
       return
     }
+    // Same guard as /claim — releasing shows[0] blind could unclaim the
+    // wrong date when an artist has multiple upcoming shows.
+    if (shows.length > 1) {
+      const list = shows.map(s => `• ${s.artist} — ${fmtDate(s.show_date)}`).join('\n')
+      await interaction.editReply(`Multiple matches — be more specific:\n${list}`)
+      return
+    }
 
     const show = shows[0]
-    await supabase.from('shows').update({ [field]: null }).eq('id', show.id)
+    // .eq(field, user.id) on the write: only clears the slot if it is still
+    // yours at write time.
+    const { data: updated, error } = await supabase
+      .from('shows')
+      .update({ [field]: null })
+      .eq('id', show.id)
+      .eq(field, user.id)
+      .select('id')
 
-    const msg = `⚠️ **${user.name}** unclaimed the **${slot}** slot for **${show.artist}** (${fmtDate(show.show_date)}) — now open`
-    const channel = interaction.channel
-    if (channel instanceof TextChannel) await channel.send(msg)
+    if (error || !updated?.length) {
+      await interaction.editReply('Could not release the slot — it may have just changed. Check the board and try again.')
+      return
+    }
 
     await interaction.editReply(`Released the ${slot} slot for **${show.artist}**.`)
 
@@ -74,13 +92,24 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       await interaction.editReply(`No reviews matching "${artist}" assigned to you.`)
       return
     }
+    if (reviews.length > 1) {
+      const list = reviews.map(r => `• ${r.artist}`).join('\n')
+      await interaction.editReply(`Multiple matches — be more specific:\n${list}`)
+      return
+    }
 
     const review = reviews[0]
-    await supabase.from('reviews').update({ assignee_id: null }).eq('id', review.id)
+    const { data: updated, error } = await supabase
+      .from('reviews')
+      .update({ assignee_id: null })
+      .eq('id', review.id)
+      .eq('assignee_id', user.id)
+      .select('id')
 
-    const msg = `⚠️ **${user.name}** unclaimed the review for **${review.artist}** — now open`
-    const channel = interaction.channel
-    if (channel instanceof TextChannel) await channel.send(msg)
+    if (error || !updated?.length) {
+      await interaction.editReply('Could not release the review — it may have just changed. Check the board and try again.')
+      return
+    }
 
     await interaction.editReply(`Released the review for **${review.artist}**.`)
   }
