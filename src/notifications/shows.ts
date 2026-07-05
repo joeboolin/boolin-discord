@@ -1,13 +1,16 @@
-import { EmbedBuilder, TextChannel } from 'discord.js'
+import { TextChannel } from 'discord.js'
 import { supabase } from '../supabase'
-import { Show, STATUS_LABELS, fmtDate } from '../types'
+import { Show, statusLabel, discordDate } from '../types'
+import { brandEmbed, BRAND } from '../embeds'
 
+// Brand palette (see src/embeds.ts) — sage for positive, sand for
+// open/attention, moss for neutral moves, red for removals.
 const COLOURS = {
-  added:     0x5865f2, // blue
-  moved:     0xf59e0b, // amber
-  confirmed: 0x22c55e, // green
-  claimed:   0x22c55e, // green
-  unclaimed: 0xef4444, // red
+  added:     BRAND.ink,
+  moved:     BRAND.moss,
+  confirmed: BRAND.sage,
+  claimed:   BRAND.sage,
+  unclaimed: BRAND.sand,
 }
 
 async function getUserName(userId: string | null): Promise<string> {
@@ -21,18 +24,15 @@ export async function onShowInserted(show: Show, channel: TextChannel): Promise<
   if (!show.photographer_id) slots.push('📸 Photo')
   if (!show.writer_id)       slots.push('✍️ Words')
 
-  const embed = new EmbedBuilder()
-    .setColor(COLOURS.added)
+  const embed = brandEmbed(COLOURS.added)
     .setTitle(show.artist)
     .setDescription('Added to the Live Shows board')
     .addFields(
-      { name: 'Date',     value: fmtDate(show.show_date), inline: true },
+      { name: 'Date',     value: discordDate(show.show_date), inline: true },
       { name: 'Location', value: show.location,            inline: true },
-      { name: 'Status',   value: STATUS_LABELS[show.status], inline: true },
+      { name: 'Status',   value: statusLabel(show.status), inline: true },
       { name: 'Open slots', value: slots.length ? slots.join(' · ') : 'All filled' }
     )
-    .setFooter({ text: 'Boolin Tunes' })
-    .setTimestamp()
 
   await channel.send({ embeds: [embed] })
 }
@@ -49,31 +49,25 @@ export async function onShowUpdated(
       const photographer = await getUserName(newShow.photographer_id)
       const writer       = await getUserName(newShow.writer_id)
 
-      const embed = new EmbedBuilder()
-        .setColor(COLOURS.confirmed)
+      const embed = brandEmbed(COLOURS.confirmed)
         .setTitle(newShow.artist)
         .setDescription('✅ Fully Confirmed')
         .addFields(
-          { name: 'Date',          value: fmtDate(newShow.show_date), inline: true },
+          { name: 'Date',          value: discordDate(newShow.show_date), inline: true },
           { name: 'Location',      value: newShow.location,            inline: true },
           { name: '📸 Photographer', value: photographer,              inline: true },
           { name: '✍️ Writer',       value: writer,                    inline: true },
         )
-        .setFooter({ text: 'Boolin Tunes' })
-        .setTimestamp()
 
       await channel.send({ embeds: [embed] })
     } else {
-      const embed = new EmbedBuilder()
-        .setColor(COLOURS.moved)
+      const embed = brandEmbed(COLOURS.moved)
         .setTitle(newShow.artist)
-        .setDescription(`Status changed from **${STATUS_LABELS[oldShow.status]}** to **${STATUS_LABELS[newShow.status]}**`)
+        .setDescription(`Status changed from **${statusLabel(oldShow.status)}** to **${statusLabel(newShow.status)}**`)
         .addFields(
-          { name: 'Date',     value: fmtDate(newShow.show_date), inline: true },
+          { name: 'Date',     value: discordDate(newShow.show_date), inline: true },
           { name: 'Location', value: newShow.location,            inline: true },
         )
-        .setFooter({ text: 'Boolin Tunes' })
-        .setTimestamp()
 
       await channel.send({ embeds: [embed] })
     }
@@ -83,21 +77,15 @@ export async function onShowUpdated(
   if (oldShow.photographer_id !== newShow.photographer_id) {
     if (newShow.photographer_id && !oldShow.photographer_id) {
       const name = await getUserName(newShow.photographer_id)
-      const embed = new EmbedBuilder()
-        .setColor(COLOURS.claimed)
+      const embed = brandEmbed(COLOURS.claimed)
         .setTitle(newShow.artist)
         .setDescription(`📸 **${name}** claimed the photo slot`)
-        .setFooter({ text: 'Boolin Tunes' })
-        .setTimestamp()
       await channel.send({ embeds: [embed] })
     } else if (!newShow.photographer_id && oldShow.photographer_id) {
       const name = await getUserName(oldShow.photographer_id)
-      const embed = new EmbedBuilder()
-        .setColor(COLOURS.unclaimed)
+      const embed = brandEmbed(COLOURS.unclaimed)
         .setTitle(newShow.artist)
         .setDescription(`📸 **${name}** unclaimed the photo slot — now open`)
-        .setFooter({ text: 'Boolin Tunes' })
-        .setTimestamp()
       await channel.send({ embeds: [embed] })
     }
   }
@@ -106,21 +94,15 @@ export async function onShowUpdated(
   if (oldShow.writer_id !== newShow.writer_id) {
     if (newShow.writer_id && !oldShow.writer_id) {
       const name = await getUserName(newShow.writer_id)
-      const embed = new EmbedBuilder()
-        .setColor(COLOURS.claimed)
+      const embed = brandEmbed(COLOURS.claimed)
         .setTitle(newShow.artist)
         .setDescription(`✍️ **${name}** claimed the words slot`)
-        .setFooter({ text: 'Boolin Tunes' })
-        .setTimestamp()
       await channel.send({ embeds: [embed] })
     } else if (!newShow.writer_id && oldShow.writer_id) {
       const name = await getUserName(oldShow.writer_id)
-      const embed = new EmbedBuilder()
-        .setColor(COLOURS.unclaimed)
+      const embed = brandEmbed(COLOURS.unclaimed)
         .setTitle(newShow.artist)
         .setDescription(`✍️ **${name}** unclaimed the words slot — now open`)
-        .setFooter({ text: 'Boolin Tunes' })
-        .setTimestamp()
       await channel.send({ embeds: [embed] })
     }
   }

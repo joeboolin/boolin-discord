@@ -1,43 +1,48 @@
-import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js'
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js'
+import { brandEmbed, BRAND } from '../embeds'
+import { cmd } from '../commandMentions'
 
 export const data = new SlashCommandBuilder()
   .setName('help')
   .setDescription('Lists all Boolin Tunes bot commands')
 
+// Built at execute time (not module load) so cmd() can resolve command ids
+// fetched at ready — each entry renders as a clickable mention that opens
+// the command pre-filled.
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  const embed = new EmbedBuilder()
+  const embed = brandEmbed(BRAND.ink)
     .setTitle('Boolin Tunes Bot — Commands')
-    .setColor(0x4a5c3a)
+    .setDescription('Tap any command to run it.')
     .addFields(
       {
         name: '🎸 Live Shows',
         value: [
-          '`/unclaimed` — Shows with open photographer or writer slots',
-          '`/shows` — All upcoming fully confirmed shows',
-          '`/request show [artist] [date] [location]` — Add a new show to the board',
-          '`/claim show [artist] photo|words` — Claim a slot on an existing show',
-          '`/unclaim show [artist] photo|words` — Release your slot',
-        ].join('\n'),
-      },
-      {
-        name: '📇 PR Tools',
-        value: [
-          '`/contact [artist]` — Look up the PR contact for an artist',
-          '`/addcontact [company] [name] [email]` — Add a PR contact',
-          '`/exportroster [company]` — Export a company roster',
+          `${cmd('unclaimed')} — Shows with open photographer or writer slots`,
+          `${cmd('shows')} — All upcoming fully confirmed shows`,
+          `${cmd('request show')} — Add a new show to the board`,
+          `${cmd('claim show')} — Claim a photo/words slot on a show`,
+          `${cmd('unclaim show')} — Release your slot`,
         ].join('\n'),
       },
       {
         name: '📝 Content Board',
         value: [
-          '`/reviews` — Unassigned reviews for current and next NMF week',
-          '`/claim review [artist]` — Assign yourself to a review',
-          '`/unclaim review [artist]` — Release a review',
-          '`/done [artist]` — Mark a review as done',
+          `${cmd('reviews')} — Unassigned reviews for current and next NMF week`,
+          `${cmd('claim review')} — Assign yourself to a review`,
+          `${cmd('unclaim review')} — Release a review`,
+          `${cmd('done')} — Mark a review as done`,
+        ].join('\n'),
+      },
+      {
+        name: '📇 PR Tools',
+        value: [
+          `${cmd('contact')} — Look up the PR contact for an artist`,
+          `${cmd('addcontact')} — Add a PR contact to the database`,
+          `${cmd('exportroster')} — Export a company roster`,
         ].join('\n'),
       }
     )
-    .setFooter({ text: 'Boolin Tunes Internal' })
+    .setFooter({ text: 'No registration needed — first command auto-links your account' })
 
   await interaction.reply({ embeds: [embed], ephemeral: true })
 }

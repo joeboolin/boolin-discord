@@ -1,6 +1,8 @@
-import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js'
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js'
 import { supabase } from '../supabase'
 import { fmtWeekDate, todayLondon } from '../types'
+import { brandEmbed, BRAND } from '../embeds'
+import { cmd } from '../commandMentions'
 
 export const data = new SlashCommandBuilder()
   .setName('reviews')
@@ -44,9 +46,9 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     return
   }
 
-  const embed = new EmbedBuilder()
+  const embed = brandEmbed(BRAND.sand)
     .setTitle('Unassigned Reviews')
-    .setColor(0x6366f1)
+    .setDescription(`Take one with ${cmd('claim review')}`)
 
   // Group by week
   const byWeek = new Map<string, typeof reviews>()
@@ -62,8 +64,6 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const lines = weekReviews.map(r => `• **${r.artist}**`)
     embed.addFields({ name: weekLabel, value: lines.join('\n') || '—' })
   }
-
-  embed.setFooter({ text: 'Use /claim review [artist] to take one' })
 
   await interaction.editReply({ embeds: [embed] })
 }

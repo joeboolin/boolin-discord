@@ -75,6 +75,16 @@ export function todayLondon(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date())
 }
 
+// Discord-native timestamp — renders in each viewer's own locale/timezone:
+// style 'D' = "4 July 2026", 'R' = "in 3 days". Date-only values anchor to
+// noon UTC so no viewer's timezone rolls them to the previous day.
+// NOTE: only renders in message content, embed DESCRIPTIONS and FIELD VALUES
+// — not titles, field names, or footers (use fmtDate/fmtWeekDate there).
+export function discordDate(isoDate: string, style: 'D' | 'R' = 'D'): string {
+  const unix = Math.floor(Date.parse(isoDate + 'T12:00:00Z') / 1000)
+  return `<t:${unix}:${style}>`
+}
+
 export function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',

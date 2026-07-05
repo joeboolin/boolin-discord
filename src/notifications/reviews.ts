@@ -1,13 +1,16 @@
-import { EmbedBuilder, TextChannel } from 'discord.js'
+import { TextChannel } from 'discord.js'
 import { supabase } from '../supabase'
+import { brandEmbed, BRAND } from '../embeds'
+import { cmd } from '../commandMentions'
 import { Review, NmfWeek, fmtWeekDate } from '../types'
 
 const COLOURS = {
-  added:    0x5865f2, // blue
-  claimed:  0x22c55e, // green
-  unclaimed:0xef4444, // red
-  done:     0x22c55e, // green
-  week:     0xa855f7, // purple
+  added:     BRAND.ink,
+  claimed:   BRAND.sage,
+  unclaimed: BRAND.sand,
+  done:      BRAND.sage,
+  removed:   BRAND.red,
+  week:      BRAND.ink, // new content week announcements
 }
 
 async function getUserName(userId: string | null): Promise<string> {
@@ -25,16 +28,14 @@ export async function onReviewInserted(review: Review, channel: TextChannel): Pr
   const weekDate  = await getWeekDate(review.nmf_week_id)
   const assignee  = review.assignee_id ? await getUserName(review.assignee_id) : null
 
-  const embed = new EmbedBuilder()
-    .setColor(COLOURS.added)
+  const embed = brandEmbed(COLOURS.added)
     .setTitle(review.artist)
     .setDescription(
       assignee
         ? `Added to **w/c ${weekDate}** — assigned to **${assignee}**`
         : `Added to **w/c ${weekDate}** — unassigned`
     )
-    .setFooter({ text: assignee ? 'Boolin Tunes' : 'Use /claim review ' + review.artist + ' to take it · Boolin Tunes' })
-    .setTimestamp()
+    .setFooter(assignee ? null : { text: `Take it: /claim review ${review.artist}` })
 
   await channel.send({ embeds: [embed] })
 }
@@ -47,12 +48,9 @@ export async function onReviewUpdated(
   // Claimed
   if (!oldReview.assignee_id && newReview.assignee_id) {
     const name = await getUserName(newReview.assignee_id)
-    const embed = new EmbedBuilder()
-      .setColor(COLOURS.claimed)
+    const embed = brandEmbed(COLOURS.claimed)
       .setTitle(newReview.artist)
       .setDescription(`✍️ **${name}** claimed this review`)
-      .setFooter({ text: 'Boolin Tunes' })
-      .setTimestamp()
     await channel.send({ embeds: [embed] })
     return
   }
@@ -60,12 +58,9 @@ export async function onReviewUpdated(
   // Unclaimed
   if (oldReview.assignee_id && !newReview.assignee_id) {
     const name = await getUserName(oldReview.assignee_id)
-    const embed = new EmbedBuilder()
-      .setColor(COLOURS.unclaimed)
+    const embed = brandEmbed(COLOURS.unclaimed)
       .setTitle(newReview.artist)
       .setDescription(`**${name}** unclaimed this review — now open`)
-      .setFooter({ text: 'Boolin Tunes' })
-      .setTimestamp()
     await channel.send({ embeds: [embed] })
     return
   }
@@ -73,12 +68,9 @@ export async function onReviewUpdated(
   // Done
   if (oldReview.status !== 'done' && newReview.status === 'done') {
     const name = await getUserName(newReview.assignee_id)
-    const embed = new EmbedBuilder()
-      .setColor(COLOURS.done)
+    const embed = brandEmbed(COLOURS.done)
       .setTitle(newReview.artist)
       .setDescription(`✅ Review marked done by **${name}**`)
-      .setFooter({ text: 'Boolin Tunes' })
-      .setTimestamp()
     await channel.send({ embeds: [embed] })
   }
 }
@@ -90,16 +82,13 @@ export async function onWeekInserted(week: NmfWeek, channel: TextChannel): Promi
     .eq('nmf_week_id', week.id)
     .is('assignee_id', null)
 
-  const embed = new EmbedBuilder()
-    .setColor(COLOURS.week)
+  const embed = brandEmbed(COLOURS.week)
     .setTitle(`New Content Week — w/c ${fmtWeekDate(week.week_date)}`)
     .setDescription(
       count && count > 0
-        ? `${count} reviews unassigned. Use \`/reviews\` to see them.`
+        ? `${count} reviews unassigned. Use ${cmd('reviews')} to see them.`
         : 'No reviews yet — add some via the internal site.'
     )
-    .setFooter({ text: 'Boolin Tunes' })
-    .setTimestamp()
 
   await channel.send({ embeds: [embed] })
 }

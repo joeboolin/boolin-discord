@@ -5,6 +5,7 @@ import { commands } from './commands'
 import { onShowInserted, onShowUpdated } from './notifications/shows'
 import { onReviewInserted, onReviewUpdated, onWeekInserted } from './notifications/reviews'
 import { Show, Review, NmfWeek } from './types'
+import { initCommandMentions } from './commandMentions'
 
 // ── Validate env ──────────────────────────────────────────────────────────
 
@@ -103,6 +104,7 @@ client.on(Events.InteractionCreate, async interaction => {
 // ── Boot ──────────────────────────────────────────────────────────────────
 
 client.once(Events.ClientReady, c => {
+  void initCommandMentions(c)
   console.log(`✓ Logged in as ${c.user.tag}`)
   setupRealtime()
   console.log(`✓ Realtime subscriptions active`)

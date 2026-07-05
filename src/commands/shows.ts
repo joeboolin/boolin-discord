@@ -1,6 +1,7 @@
-import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js'
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js'
 import { supabase } from '../supabase'
-import { fmtDate, todayLondon } from '../types'
+import { discordDate, todayLondon } from '../types'
+import { brandEmbed, BRAND } from '../embeds'
 
 export const data = new SlashCommandBuilder()
   .setName('shows')
@@ -32,14 +33,13 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     return
   }
 
-  const embed = new EmbedBuilder()
+  const embed = brandEmbed(BRAND.sage)
     .setTitle('Fully Confirmed Shows')
-    .setColor(0x4a5c3a)
 
   const lines = shows.map((s: any) => {
     const photo = s.photographer?.name ?? '—'
     const words = s.writer?.name ?? '—'
-    return `**${s.artist}** — ${fmtDate(s.show_date)}, ${s.location}\n└ 📸 ${photo} · ✍️ ${words}`
+    return `**${s.artist}** — ${discordDate(s.show_date)} · ${s.location}\n└ 📸 ${photo} · ✍️ ${words}`
   })
 
   const chunks: string[] = []

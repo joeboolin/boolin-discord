@@ -3,7 +3,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js'
 import { supabase, getOrCreateUser } from '../supabase'
-import { fmtDate, todayLondon } from '../types'
+import { discordDate, todayLondon } from '../types'
 
 export const data = new SlashCommandBuilder()
   .setName('claim')
@@ -62,7 +62,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       return
     }
     if (shows.length > 1) {
-      const list = shows.map(s => `• ${s.artist} — ${fmtDate(s.show_date)}`).join('\n')
+      const list = shows.map(s => `• ${s.artist} — ${discordDate(s.show_date)}`).join('\n')
       await interaction.editReply(`Multiple matches — be more specific:\n${list}`)
       return
     }

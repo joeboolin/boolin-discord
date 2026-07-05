@@ -1,10 +1,21 @@
-import { ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder } from 'discord.js'
+import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js'
 import { supabase } from '../supabase'
-import { Show, fmtDate, todayLondon } from '../types'
+import { Show, discordDate, todayLondon } from '../types'
+import { brandEmbed, BRAND } from '../embeds'
+import { cmd } from '../commandMentions'
 
 export const data = new SlashCommandBuilder()
   .setName('unclaimed')
   .setDescription('Lists upcoming shows with open photographer or writer slots')
+
+// Month label for grouping, in UK time to match show dates
+function monthKey(iso: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Europe/London',
+  }).format(new Date(iso + 'T12:00:00Z'))
+}
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.deferReply({ ephemeral: true })
@@ -28,33 +39,47 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     return
   }
 
-  const embed = new EmbedBuilder()
-    .setTitle('Shows with Open Slots')
-    .setColor(0xf59e0b) // amber
+  const embed = brandEmbed(BRAND.sand)
+    .setTitle(`Open Slots — ${shows.length} show${shows.length !== 1 ? 's' : ''}`)
+    .setFooter({ text: 'Claim with /claim show — tap a command chip below' })
 
-  const lines = (shows as Show[]).map(s => {
-    const slots: string[] = []
-    if (!s.photographer_id) slots.push('📸 Photo')
-    if (!s.writer_id)       slots.push('✍️ Words')
-    return `**${s.artist}** — ${fmtDate(s.show_date)}, ${s.location}\n└ ${slots.join(' · ')}`
-  })
+  // Group by month (dates are already sorted, so months come out in order)
+  const byMonth = new Map<string, Show[]>()
+  for (const s of shows as Show[]) {
+    const key = monthKey(s.show_date)
+    if (!byMonth.has(key)) byMonth.set(key, [])
+    byMonth.get(key)!.push(s)
+  }
 
-  // Discord embed fields max 1024 chars — chunk if needed
-  const chunks: string[] = []
-  let current = ''
-  for (const line of lines) {
-    if ((current + '\n\n' + line).length > 1000) {
-      chunks.push(current)
-      current = line
-    } else {
+  for (const [month, monthShows] of byMonth) {
+    const lines = monthShows.map(s => {
+      const chips: string[] = []
+      if (!s.photographer_id) chips.push('`📸 Photo`')
+      if (!s.writer_id)       chips.push('`✍️ Words`')
+      return `**${s.artist}** — ${discordDate(s.show_date)} · ${s.location}\n${chips.join(' ')}`
+    })
+
+    // Field values cap at 1024 chars — continue into unnamed fields if a
+    // month overflows
+    let current = ''
+    let first = true
+    const flush = () => {
+      if (!current) return
+      embed.addFields({
+        name: first ? `${month} (${monthShows.length})` : '\u200b',
+        value: current,
+      })
+      first = false
+      current = ''
+    }
+    for (const line of lines) {
+      if ((current + '\n\n' + line).length > 1000) flush()
       current = current ? current + '\n\n' + line : line
     }
+    flush()
   }
-  if (current) chunks.push(current)
 
-  chunks.forEach((chunk, i) => {
-    embed.addFields({ name: i === 0 ? `${shows.length} show(s)` : '\u200b', value: chunk })
-  })
+  embed.setDescription(`Take one with ${cmd('claim show')}`)
 
   await interaction.editReply({ embeds: [embed] })
 }

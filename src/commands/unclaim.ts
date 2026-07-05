@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js'
 import { supabase, getOrCreateUser } from '../supabase'
-import { fmtDate, todayLondon } from '../types'
+import { discordDate, todayLondon } from '../types'
 
 export const data = new SlashCommandBuilder()
   .setName('unclaim')
@@ -59,7 +59,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     // Same guard as /claim — releasing shows[0] blind could unclaim the
     // wrong date when an artist has multiple upcoming shows.
     if (shows.length > 1) {
-      const list = shows.map(s => `• ${s.artist} — ${fmtDate(s.show_date)}`).join('\n')
+      const list = shows.map(s => `• ${s.artist} — ${discordDate(s.show_date)}`).join('\n')
       await interaction.editReply(`Multiple matches — be more specific:\n${list}`)
       return
     }

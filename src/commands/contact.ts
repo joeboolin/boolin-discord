@@ -100,7 +100,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const rows = grouped[artistName]
     const embed = new EmbedBuilder()
       .setTitle(`🎵 ${artistName}`)
-      .setColor(0x5865f2)
+      .setColor(0x1d291c) // BRAND.ink — brand palette, not Discord blurple
 
     const sections = rows.map(row => {
       const co = row.pr_companies as unknown as {
