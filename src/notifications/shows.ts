@@ -1,14 +1,14 @@
 import { TextChannel } from 'discord.js'
 import { supabase } from '../supabase'
 import { Show, statusLabel, discordDate } from '../types'
-import { brandEmbed, BRAND } from '../embeds'
+import { brandEmbed, statusColour, BRAND } from '../embeds'
 
 // Brand palette (see src/embeds.ts) — sage for positive, sand for
 // open/attention, moss for neutral moves, red for removals.
+// Show-state embeds take their stripe from the DESTINATION status via
+// statusColour(), matching the board columns. Claim/release keep the brand
+// palette (the board has no colour for those events).
 const COLOURS = {
-  added:     BRAND.ink,
-  moved:     BRAND.moss,
-  confirmed: BRAND.sage,
   claimed:   BRAND.sage,
   unclaimed: BRAND.sand,
 }
@@ -24,7 +24,7 @@ export async function onShowInserted(show: Show, channel: TextChannel): Promise<
   if (!show.photographer_id) slots.push('📸 Photo')
   if (!show.writer_id)       slots.push('✍️ Words')
 
-  const embed = brandEmbed(COLOURS.added)
+  const embed = brandEmbed(statusColour(show.status))
     .setTitle(show.artist)
     .setDescription('Added to the Live Shows board')
     .addFields(
@@ -49,7 +49,7 @@ export async function onShowUpdated(
       const photographer = await getUserName(newShow.photographer_id)
       const writer       = await getUserName(newShow.writer_id)
 
-      const embed = brandEmbed(COLOURS.confirmed)
+      const embed = brandEmbed(statusColour('fully_confirmed'))
         .setTitle(newShow.artist)
         .setDescription('✅ Fully Confirmed')
         .addFields(
@@ -61,7 +61,7 @@ export async function onShowUpdated(
 
       await channel.send({ embeds: [embed] })
     } else {
-      const embed = brandEmbed(COLOURS.moved)
+      const embed = brandEmbed(statusColour(newShow.status))
         .setTitle(newShow.artist)
         .setDescription(`Status changed from **${statusLabel(oldShow.status)}** to **${statusLabel(newShow.status)}**`)
         .addFields(

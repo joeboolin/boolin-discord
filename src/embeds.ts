@@ -22,6 +22,23 @@ const LOGO =
  * hints only (the author strip already carries the branding, so no more
  * "Boolin Tunes" footers).
  */
+// Show-status stripe colours — these MATCH the internal board's kanban
+// column accents (Tailwind blue-400 / gray-300 / amber-400 / purple-400 /
+// green-500, see SHOW_STATUS_THEME in boolin-internal lib/types.ts), so an
+// embed's stripe reads as the same state as the column the card sits in.
+// Change the board's colours? Change these too.
+export const STATUS_COLOURS: Record<string, number> = {
+  backlog:                    0x60a5fa, // blue-400
+  to_be_requested:            0xd1d5db, // gray-300
+  awaiting_response:          0xfbbf24, // amber-400
+  awaiting_full_confirmation: 0xc084fc, // purple-400
+  fully_confirmed:            0x22c55e, // green-500
+}
+
+export function statusColour(status: string): number {
+  return STATUS_COLOURS[status] ?? BRAND.ink
+}
+
 export function brandEmbed(colour: number = BRAND.ink): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(colour)
