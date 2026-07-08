@@ -43,6 +43,26 @@ async function getChannel(id: string): Promise<TextChannel | null> {
 
 // ── Supabase Realtime subscriptions ──────────────────────────────────────
 
+// Channel status watchdog. `.subscribe(cb)` reports status transitions, and
+// previously we only logged them — so when the websocket dropped (Railway
+// networking blip, Supabase restart), channels landed in CHANNEL_ERROR/CLOSED
+// and the bot ran on for days with dead subscriptions: commands fine (plain
+// HTTP), notifications silently gone. Exact incident: 7 July 2026.
+//
+// Fix: treat a dead channel as fatal and exit. Railway restarts the
+// container (with backoff), which rebuilds every subscription from scratch —
+// far more reliable than trying to coax supabase-js into rejoining in-place.
+// The 5s delay lets any in-flight work finish and avoids a hot crash-loop.
+function watchChannel(name: string) {
+  return (status: string, err?: Error) => {
+    console.log(`[realtime] ${name}: ${status}${err ? ` (${err.message})` : ''}`)
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      console.error(`[realtime] ${name} is dead — exiting so Railway restarts us with fresh subscriptions`)
+      setTimeout(() => process.exit(1), 5000)
+    }
+  }
+}
+
 function setupRealtime(): void {
   // Shows table
   supabase
@@ -55,7 +75,7 @@ function setupRealtime(): void {
       const ch = await getChannel(process.env.DISCORD_LIVE_CHANNEL_ID!)
       if (ch) await onShowUpdated(payload.old as Show, payload.new as Show, ch)
     })
-    .subscribe(status => console.log(`[realtime] shows: ${status}`))
+    .subscribe(watchChannel('shows'))
 
   // Reviews table
   supabase
@@ -68,7 +88,7 @@ function setupRealtime(): void {
       const ch = await getChannel(process.env.DISCORD_CONTENT_CHANNEL_ID!)
       if (ch) await onReviewUpdated(payload.old as Review, payload.new as Review, ch)
     })
-    .subscribe(status => console.log(`[realtime] reviews: ${status}`))
+    .subscribe(watchChannel('reviews'))
 
   // NMF weeks table
   supabase
@@ -77,7 +97,7 @@ function setupRealtime(): void {
       const ch = await getChannel(process.env.DISCORD_CONTENT_CHANNEL_ID!)
       if (ch) await onWeekInserted(payload.new as NmfWeek, ch)
     })
-    .subscribe(status => console.log(`[realtime] nmf_weeks: ${status}`))
+    .subscribe(watchChannel('nmf_weeks'))
 }
 
 // ── Command handler ───────────────────────────────────────────────────────
