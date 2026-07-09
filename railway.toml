@@ -3,3 +3,7 @@ builder = "NIXPACKS"
 
 [deploy]
 startCommand = "npx tsx src/index.ts"
+# Restart on crash/deliberate exit. Without this, the realtime watchdog's
+# exit(1) on 9 July stayed down for 5 hours instead of restarting.
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

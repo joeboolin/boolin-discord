@@ -43,22 +43,44 @@ async function getChannel(id: string): Promise<TextChannel | null> {
 
 // ── Supabase Realtime subscriptions ──────────────────────────────────────
 
-// Channel status watchdog. `.subscribe(cb)` reports status transitions, and
-// previously we only logged them — so when the websocket dropped (Railway
-// networking blip, Supabase restart), channels landed in CHANNEL_ERROR/CLOSED
-// and the bot ran on for days with dead subscriptions: commands fine (plain
-// HTTP), notifications silently gone. Exact incident: 7 July 2026.
+// Channel status watchdog, v2.
 //
-// Fix: treat a dead channel as fatal and exit. Railway restarts the
-// container (with backoff), which rebuilds every subscription from scratch —
-// far more reliable than trying to coax supabase-js into rejoining in-place.
-// The 5s delay lets any in-flight work finish and avoids a hot crash-loop.
+// v1 exited immediately on CHANNEL_ERROR — and on 9 July a 1-second socket
+// blip (code 1006) errored all three channels, supabase-js re-subscribed
+// them ON ITS OWN within the same second, and the already-scheduled exit
+// killed a healthy bot anyway. With no Railway restart policy configured,
+// that turned one second of blip into five hours of downtime.
+//
+// v2 gives the client's own rejoin logic a grace window: a bad status arms
+// a 60s timer, and a SUBSCRIBED for that channel disarms it. Only a channel
+// that stays down for the full minute triggers the exit — the true
+// wedged-subscription case (the original 7 July silent-notifications
+// incident) that in-place rejoining doesn't fix. railway.toml now carries
+// an explicit ON_FAILURE restart policy so the exit path actually restarts.
+const pendingExits = new Map<string, NodeJS.Timeout>()
+const GRACE_MS = 60_000
+
 function watchChannel(name: string) {
   return (status: string, err?: Error) => {
     console.log(`[realtime] ${name}: ${status}${err ? ` (${err.message})` : ''}`)
+
+    if (status === 'SUBSCRIBED') {
+      const pending = pendingExits.get(name)
+      if (pending) {
+        clearTimeout(pending)
+        pendingExits.delete(name)
+        console.log(`[realtime] ${name} recovered on its own — exit cancelled`)
+      }
+      return
+    }
+
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-      console.error(`[realtime] ${name} is dead — exiting so Railway restarts us with fresh subscriptions`)
-      setTimeout(() => process.exit(1), 5000)
+      if (pendingExits.has(name)) return // timer already running
+      console.warn(`[realtime] ${name} unhealthy — exiting in ${GRACE_MS / 1000}s unless it recovers`)
+      pendingExits.set(name, setTimeout(() => {
+        console.error(`[realtime] ${name} did not recover within ${GRACE_MS / 1000}s — exiting for a fresh start`)
+        process.exit(1)
+      }, GRACE_MS))
     }
   }
 }
