@@ -1,2 +1,10 @@
 .env
 .env.local
+
+# Build output. `npm run build` writes here, but Railway runs the TypeScript
+# directly via tsx — dist/ is a local typecheck artifact and must never be
+# committed.
+dist/
+*.tsbuildinfo
+
+node_modules/
