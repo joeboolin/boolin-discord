@@ -33,6 +33,11 @@ only read by `deploy-commands`. Set, commands register to that guild and appear
 instantly; unset, they register globally and can take up to an hour to show up.
 Keep it set.
 
+`INTERNAL_SITE_URL` is also optional — the base URL of the boolin-internal
+Next.js site (e.g. its Vercel domain), used only to link the aging-show nudge
+(`src/notifications/nudges.ts`) to the Live Shows board. Unset, the nudge still
+posts, just without the link.
+
 Never commit `.env` (gitignored — keep it that way). It holds a live bot token
 and the Supabase service role key.
 

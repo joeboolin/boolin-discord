@@ -7,6 +7,8 @@ export type ShowStatus =
 
 export type ReviewStatus = 'not_started' | 'in_progress' | 'done'
 
+export type InterviewStatus = 'backlog' | 'requested' | 'confirmed' | 'recorded' | 'done'
+
 export interface Show {
   id:              string
   artist:          string
@@ -19,6 +21,7 @@ export interface Show {
   notes:           string | null
   created_at:      string
   updated_at:      string
+  last_nudged_at:  string | null
 }
 
 export interface Review {
@@ -31,6 +34,16 @@ export interface Review {
   wp_post_id:  number | null
   created_at:  string
   updated_at:  string
+}
+
+export interface InterviewCard {
+  id:          string
+  title:       string
+  description: string | null
+  assignee_id: string | null
+  status:      InterviewStatus
+  position:    number
+  created_at:  string
 }
 
 export interface NmfWeek {
@@ -64,6 +77,22 @@ export const STATUS_LABELS: Record<ShowStatus, string> = {
 // raw value, so a future status degrades gracefully instead of breaking.
 export function statusLabel(status: string): string {
   const known = (STATUS_LABELS as Record<string, string>)[status]
+  if (known) return known
+  return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+export const INTERVIEW_STATUS_LABELS: Record<InterviewStatus, string> = {
+  backlog:   'Backlog',
+  requested: 'Requested',
+  confirmed: 'Confirmed',
+  recorded:  'Recorded',
+  done:      'Done',
+}
+
+// Same fallback-safe pattern as statusLabel() above, for the same reason:
+// the internal site owns interview_cards.status too.
+export function interviewStatusLabel(status: string): string {
+  const known = (INTERVIEW_STATUS_LABELS as Record<string, string>)[status]
   if (known) return known
   return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }

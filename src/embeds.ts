@@ -39,6 +39,23 @@ export function statusColour(status: string): number {
   return STATUS_COLOURS[status] ?? BRAND.ink
 }
 
+// Interview-card status stripe colours — MATCH the internal board's kanban
+// column accents (Tailwind gray-300 / sky-400 / amber-400 / violet-400 /
+// green-500, see COLUMNS in boolin-internal
+// components/interviews/InterviewBoard.tsx). Change the board's colours?
+// Change these too.
+export const INTERVIEW_STATUS_COLOURS: Record<string, number> = {
+  backlog:   0xd1d5db, // gray-300
+  requested: 0x38bdf8, // sky-400
+  confirmed: 0xfbbf24, // amber-400
+  recorded:  0xa78bfa, // violet-400
+  done:      0x22c55e, // green-500
+}
+
+export function interviewStatusColour(status: string): number {
+  return INTERVIEW_STATUS_COLOURS[status] ?? BRAND.ink
+}
+
 export function brandEmbed(colour: number = BRAND.ink): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(colour)

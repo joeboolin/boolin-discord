@@ -4,7 +4,9 @@ import { supabase } from './supabase'
 import { commands } from './commands'
 import { onShowInserted, onShowUpdated } from './notifications/shows'
 import { onReviewInserted, onReviewUpdated, onWeekInserted } from './notifications/reviews'
-import { Show, Review, NmfWeek } from './types'
+import { onInterviewInserted, onInterviewUpdated } from './notifications/interviews'
+import { runAgingShowNudge } from './notifications/nudges'
+import { Show, Review, NmfWeek, InterviewCard } from './types'
 import { initCommandMentions } from './commandMentions'
 
 // ── Validate env ──────────────────────────────────────────────────────────
@@ -112,6 +114,21 @@ function setupRealtime(): void {
     })
     .subscribe(watchChannel('reviews'))
 
+  // Interview cards table — deliberately quieter than shows/reviews (see
+  // notifications/interviews.ts): every insert posts, but an update only
+  // posts when the status lands on Confirmed, Recorded or Done.
+  supabase
+    .channel('interviews-changes')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'interview_cards' }, async payload => {
+      const ch = await getChannel(process.env.DISCORD_CONTENT_CHANNEL_ID!)
+      if (ch) await onInterviewInserted(payload.new as InterviewCard, ch)
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'interview_cards' }, async payload => {
+      const ch = await getChannel(process.env.DISCORD_CONTENT_CHANNEL_ID!)
+      if (ch) await onInterviewUpdated(payload.old as InterviewCard, payload.new as InterviewCard, ch)
+    })
+    .subscribe(watchChannel('interview_cards'))
+
   // NMF weeks table
   supabase
     .channel('weeks-changes')
@@ -120,6 +137,30 @@ function setupRealtime(): void {
       if (ch) await onWeekInserted(payload.new as NmfWeek, ch)
     })
     .subscribe(watchChannel('nmf_weeks'))
+}
+
+// ── Daily aging-show nudge ────────────────────────────────────────────────
+//
+// No cron dependency: the actual "once per day" guarantee comes from
+// last_nudged_at on the shows row (see notifications/nudges.ts), not from
+// this timer's precision, so a plain interval is enough — no need to align
+// to a specific wall-clock time. Runs once immediately (so a stuck show
+// isn't left unflagged for up to 24h after a redeploy, which — per
+// CLAUDE.md — happens on every push to main) and then every 24h after that.
+const NUDGE_INTERVAL_MS = 24 * 60 * 60 * 1000
+
+function scheduleNudgeCheck(): void {
+  const run = async () => {
+    try {
+      const ch = await getChannel(process.env.DISCORD_LIVE_CHANNEL_ID!)
+      if (ch) await runAgingShowNudge(ch)
+    } catch (err) {
+      console.error('[nudges] check failed:', err)
+    }
+  }
+
+  void run()
+  setInterval(run, NUDGE_INTERVAL_MS)
 }
 
 // ── Command handler ───────────────────────────────────────────────────────
@@ -150,6 +191,8 @@ client.once(Events.ClientReady, c => {
   console.log(`✓ Logged in as ${c.user.tag}`)
   setupRealtime()
   console.log(`✓ Realtime subscriptions active`)
+  scheduleNudgeCheck()
+  console.log(`✓ Aging-show nudge scheduled`)
   console.log(`✓ ${commands.size} commands registered`)
 })
 
